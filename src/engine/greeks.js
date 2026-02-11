@@ -121,3 +121,126 @@ export const generatePnLScenarios = (currentPrice, strike, premium, type, contra
 
     return scenarios;
 };
+
+// ─── LIVE GREEKS COMPARISON ───
+// Fetches Polygon options data and compares market Greeks vs calculated Greeks
+export const fetchLiveGreeksComparison = async (ticker, currentPrice, otmPct, daysToExpiry, riskFreeRate) => {
+    const T = daysToExpiry / 365;
+    const putStrike = currentPrice * (1 - otmPct);
+    const callStrike = currentPrice * (1 + otmPct);
+
+    // Our calculated Greeks
+    const calcPut = calculateGreeks(currentPrice, putStrike, T, riskFreeRate, null, "put");
+    const calcCall = calculateGreeks(currentPrice, callStrike, T, riskFreeRate, null, "call");
+
+    try {
+        const { fetchOptionsChain } = await import("../services/polygonApi.js");
+        const optionsData = await fetchOptionsChain(ticker);
+
+        if (!optionsData?.contracts?.length) {
+            return { calculated: { put: calcPut, call: calcCall }, market: null, comparison: null };
+        }
+
+        // Find nearest put and call to our target strikes
+        const puts = optionsData.contracts.filter((c) => c.contractType === "put");
+        const calls = optionsData.contracts.filter((c) => c.contractType === "call");
+
+        const findNearest = (contracts, targetStrike) => {
+            if (!contracts.length) return null;
+            return contracts.reduce((best, c) =>
+                Math.abs(c.strikePrice - targetStrike) < Math.abs(best.strikePrice - targetStrike) ? c : best
+            );
+        };
+
+        const nearestPut = findNearest(puts, putStrike);
+        const nearestCall = findNearest(calls, callStrike);
+
+        // Recalculate with matched strikes and market IV
+        const putIV = nearestPut?.impliedVolatility || 0.30;
+        const callIV = nearestCall?.impliedVolatility || 0.30;
+        const putT = nearestPut?.expirationDate
+            ? Math.max(1, Math.round((new Date(nearestPut.expirationDate) - new Date()) / 86400000)) / 365
+            : T;
+        const callT = nearestCall?.expirationDate
+            ? Math.max(1, Math.round((new Date(nearestCall.expirationDate) - new Date()) / 86400000)) / 365
+            : T;
+
+        const recalcPut = calculateGreeks(currentPrice, nearestPut?.strikePrice || putStrike, putT, riskFreeRate, putIV, "put");
+        const recalcCall = calculateGreeks(currentPrice, nearestCall?.strikePrice || callStrike, callT, riskFreeRate, callIV, "call");
+
+        // Build comparison
+        const pctDiff = (calc, market) =>
+            market !== 0 ? ((calc - market) / Math.abs(market)) * 100 : 0;
+
+        const buildComparison = (recalc, market) => {
+            if (!market) return null;
+            return {
+                delta: {
+                    calculated: recalc.delta,
+                    market: market.delta,
+                    diff: pctDiff(recalc.delta, market.delta),
+                },
+                gamma: {
+                    calculated: recalc.gamma,
+                    market: market.gamma,
+                    diff: pctDiff(recalc.gamma, market.gamma),
+                },
+                theta: {
+                    calculated: recalc.theta,
+                    market: market.theta,
+                    diff: pctDiff(recalc.theta, market.theta),
+                },
+                vega: {
+                    calculated: recalc.vega,
+                    market: market.vega,
+                    diff: pctDiff(recalc.vega, market.vega),
+                },
+                iv: {
+                    calculated: null, // IV is an input for BS, not an output
+                    market: market.impliedVolatility,
+                },
+            };
+        };
+
+        return {
+            calculated: { put: recalcPut, call: recalcCall },
+            market: {
+                put: nearestPut ? {
+                    delta: nearestPut.delta,
+                    gamma: nearestPut.gamma,
+                    theta: nearestPut.theta,
+                    vega: nearestPut.vega,
+                    impliedVolatility: nearestPut.impliedVolatility,
+                    strike: nearestPut.strikePrice,
+                    bid: nearestPut.bid,
+                    ask: nearestPut.ask,
+                    dte: Math.round((new Date(nearestPut.expirationDate) - new Date()) / 86400000),
+                } : null,
+                call: nearestCall ? {
+                    delta: nearestCall.delta,
+                    gamma: nearestCall.gamma,
+                    theta: nearestCall.theta,
+                    vega: nearestCall.vega,
+                    impliedVolatility: nearestCall.impliedVolatility,
+                    strike: nearestCall.strikePrice,
+                    bid: nearestCall.bid,
+                    ask: nearestCall.ask,
+                    dte: Math.round((new Date(nearestCall.expirationDate) - new Date()) / 86400000),
+                } : null,
+            },
+            comparison: {
+                put: buildComparison(recalcPut, nearestPut),
+                call: buildComparison(recalcCall, nearestCall),
+            },
+            _live: true,
+            _mock: optionsData._mock || false,
+        };
+    } catch {
+        return {
+            calculated: { put: calcPut, call: calcCall },
+            market: null,
+            comparison: null,
+            _live: false,
+        };
+    }
+};

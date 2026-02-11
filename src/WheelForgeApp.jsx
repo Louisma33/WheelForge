@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 // Engine
-import { generatePriceData, simulateWheel, predictOutcome, TICKERS } from "./engine";
+import { generatePriceData, simulateWheel, simulateWheelHistorical, predictOutcome, TICKERS, getHybridPriceData } from "./engine";
 
 // Constants & Utils
 import {
@@ -106,6 +106,12 @@ export default function WheelForgeApp() {
   const [showSettings, setShowSettings] = useState(false);
   const [simCount, setSimCount] = useState(0);
 
+  // ── Live data mode ──
+  const [useLiveData, setUseLiveData] = useState(() =>
+    loadFromStorage("useLiveData", false)
+  );
+  const [dataSource, setDataSource] = useState("simulated");
+
   // ── Market data navigation state ──
   const [detailTicker, setDetailTicker] = useState(null);
 
@@ -131,6 +137,7 @@ export default function WheelForgeApp() {
   useEffect(() => { saveToStorage("daysToExpiry", daysToExpiry); }, [daysToExpiry]);
   useEffect(() => { saveToStorage("contracts", contracts); }, [contracts]);
   useEffect(() => { saveToStorage("chatMessages", chatMessages); }, [chatMessages]);
+  useEffect(() => { saveToStorage("useLiveData", useLiveData); }, [useLiveData]);
 
   const params = useMemo(
     () => ({
@@ -177,18 +184,39 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
   );
 
   // ─── RUN SIMULATION ───
-  const runSimulation = useCallback(() => {
+  const runSimulation = useCallback(async () => {
     setRunning(true);
     setAiAnalysis(null);
     setAiRecs(null);
-    setTimeout(() => {
-      const pd = generatePriceData(ticker, simDays);
-      setPriceData(pd);
-      const res = simulateWheel(pd, params);
+
+    try {
+      let pd, res;
+
+      if (useLiveData) {
+        // ── LIVE / HISTORICAL MODE ──
+        pd = await getHybridPriceData(ticker, simDays, true);
+        setPriceData(pd);
+        setDataSource(pd._live ? "historical" : "simulated");
+
+        // Use historical backtester for enhanced metrics
+        try {
+          res = await simulateWheelHistorical(ticker, { ...params, simDays });
+        } catch {
+          // Fallback to standard simulator if historical fails
+          res = simulateWheel(pd, params);
+        }
+      } else {
+        // ── SIMULATED MODE (original behavior) ──
+        await new Promise((r) => setTimeout(r, 400)); // small delay for UX
+        pd = generatePriceData(ticker, simDays);
+        setPriceData(pd);
+        setDataSource("simulated");
+        res = simulateWheel(pd, params);
+      }
+
       setResults(res);
       const pred = predictOutcome(pd, params);
       setPredictions(pred);
-      setRunning(false);
       setSimCount((c) => c + 1);
 
       // Save to history
@@ -206,9 +234,23 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
         putsAssigned: res.putsAssigned,
         callsAssigned: res.callsAssigned,
         finalValue: res.finalValue,
+        dataSource: useLiveData ? "historical" : "simulated",
       });
-    }, 500);
-  }, [ticker, simDays, params]);
+    } catch (err) {
+      console.error("Simulation failed:", err);
+      // Fallback: run simulated
+      const pd = generatePriceData(ticker, simDays);
+      setPriceData(pd);
+      setDataSource("simulated");
+      const res = simulateWheel(pd, params);
+      setResults(res);
+      const pred = predictOutcome(pd, params);
+      setPredictions(pred);
+      setSimCount((c) => c + 1);
+    } finally {
+      setRunning(false);
+    }
+  }, [ticker, simDays, params, useLiveData]);
 
   useEffect(() => {
     if (onboarded && !results) runSimulation();
@@ -641,6 +683,95 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
               ⚡ {simCount} simulation{simCount !== 1 ? "s" : ""} run this session
             </div>
           )}
+
+          {/* LIVE DATA TOGGLE */}
+          <div
+            style={{
+              marginTop: 16,
+              padding: "12px 14px",
+              borderRadius: 10,
+              background: useLiveData ? "rgba(74,222,128,0.06)" : "rgba(201,168,76,0.06)",
+              border: `1px solid ${useLiveData ? "rgba(74,222,128,0.2)" : "rgba(201,168,76,0.15)"}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: useLiveData ? "#4ade80" : GOLD,
+                  letterSpacing: 0.5,
+                }}
+              >
+                {useLiveData ? "📡 LIVE DATA" : "🎲 SIMULATED DATA"}
+              </div>
+              <div
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 9,
+                  color: TEXT_SECONDARY,
+                  marginTop: 3,
+                }}
+              >
+                {useLiveData
+                  ? "Backtesting with historical prices"
+                  : "Using GBM-generated price paths"}
+              </div>
+            </div>
+            <button
+              onClick={() => setUseLiveData(!useLiveData)}
+              style={{
+                width: 44,
+                height: 24,
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                position: "relative",
+                transition: "background 0.3s",
+                background: useLiveData
+                  ? "rgba(74,222,128,0.4)"
+                  : "rgba(201,168,76,0.2)",
+                flexShrink: 0,
+              }}
+            >
+              <div
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  background: useLiveData ? "#4ade80" : "#888",
+                  position: "absolute",
+                  top: 3,
+                  left: useLiveData ? 23 : 3,
+                  transition: "left 0.3s, background 0.3s",
+                  boxShadow: useLiveData ? "0 0 6px rgba(74,222,128,0.4)" : "none",
+                }}
+              />
+            </button>
+          </div>
+
+          {/* Data source badge */}
+          {dataSource !== "simulated" && (
+            <div
+              style={{
+                marginTop: 8,
+                fontFamily: monoFont,
+                fontSize: 9,
+                color: "#4ade80",
+                textAlign: "center",
+                opacity: 0.7,
+              }}
+            >
+              Last run: {dataSource} data (
+              {results?.tradingDays ? `${results.tradingDays} days` : ""},
+              {results?.realVolatility ? ` σ=${results.realVolatility}%` : ""})
+            </div>
+          )}
         </div>
       )}
 
@@ -779,6 +910,9 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
               aiRecs={aiRecs}
               recsLoading={recsLoading}
               getAiRecs={getAiRecs}
+              dataSource={dataSource}
+              useLiveData={useLiveData}
+              ticker={ticker}
             />
           )}
 
@@ -799,6 +933,7 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
               daysToExpiry={daysToExpiry}
               riskFreeRate={riskFreeRate}
               contracts={contracts}
+              useLiveData={useLiveData}
             />
           )}
 

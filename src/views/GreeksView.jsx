@@ -1,15 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
     AreaChart, Area, CartesianGrid, XAxis, YAxis,
     Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { Activity, TrendingUp, Zap } from "lucide-react";
+import { Activity, TrendingUp, Zap, RefreshCw, BarChart2 } from "lucide-react";
 import {
     GOLD, cardStyle, monoFont, tooltipStyle,
     TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
     GREEN, RED, PURPLE, AMBER, VIOLET, BLUE,
 } from "../constants";
-import { getWheelGreeks, generatePnLScenarios, blackScholes } from "../engine";
+import { getWheelGreeks, generatePnLScenarios, blackScholes, fetchLiveGreeksComparison } from "../engine";
 
 const GREEK_INFO = {
     delta: {
@@ -100,8 +100,11 @@ const GreekBar = ({ label, value, maxVal, color, desc }) => {
     );
 };
 
-const GreeksView = ({ priceData, ticker, otmPct, daysToExpiry, riskFreeRate, contracts }) => {
+const GreeksView = ({ priceData, ticker, otmPct, daysToExpiry, riskFreeRate, contracts, useLiveData = false }) => {
     const [activeType, setActiveType] = useState("put");
+    const [showComparison, setShowComparison] = useState(false);
+    const [marketData, setMarketData] = useState(null);
+    const [marketLoading, setMarketLoading] = useState(false);
 
     const greeks = useMemo(() => {
         if (!priceData || !priceData.data.length) return null;
@@ -437,6 +440,198 @@ const GreeksView = ({ priceData, ticker, otmPct, daysToExpiry, riskFreeRate, con
                     )}
                 </div>
             </div>
+
+            {/* Compare with Market Toggle */}
+            {useLiveData && (
+                <button
+                    onClick={async () => {
+                        if (!showComparison) {
+                            setMarketLoading(true);
+                            setShowComparison(true);
+                            try {
+                                const currentPrice = priceData.data[priceData.data.length - 1].close;
+                                const result = await fetchLiveGreeksComparison(
+                                    ticker, currentPrice, otmPct / 100, daysToExpiry, riskFreeRate
+                                );
+                                setMarketData(result);
+                            } catch (err) {
+                                console.error("Failed to fetch market Greeks:", err);
+                            } finally {
+                                setMarketLoading(false);
+                            }
+                        } else {
+                            setShowComparison(false);
+                        }
+                    }}
+                    disabled={marketLoading}
+                    style={{
+                        ...cardStyle,
+                        padding: 16,
+                        border: showComparison
+                            ? `1px solid ${PURPLE}40`
+                            : `1px solid rgba(201,168,76,0.2)`,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        width: "100%",
+                        textAlign: "left",
+                        transition: "all 0.2s ease",
+                        background: showComparison
+                            ? `${PURPLE}08`
+                            : cardStyle.background,
+                    }}
+                >
+                    <div
+                        style={{
+                            background: `${PURPLE}20`,
+                            borderRadius: 10,
+                            padding: 10,
+                            display: "flex",
+                        }}
+                    >
+                        {marketLoading ? (
+                            <RefreshCw size={18} color={PURPLE} style={{ animation: "pulse 1s infinite" }} />
+                        ) : (
+                            <BarChart2 size={18} color={PURPLE} />
+                        )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_PRIMARY }}>
+                            {marketLoading ? "Fetching market data..." : showComparison ? "Hide Market Comparison" : "Compare with Market"}
+                        </div>
+                        <div style={{ fontSize: 11, color: TEXT_SECONDARY }}>
+                            Side-by-side: Calculated vs. Market Greeks
+                        </div>
+                    </div>
+                </button>
+            )}
+
+            {/* Market Comparison Table */}
+            {showComparison && marketData?.comparison && (
+                <div style={{ ...cardStyle, padding: 20, animation: "slideUp 0.3s ease" }}>
+                    <div
+                        style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: PURPLE,
+                            marginBottom: 16,
+                            fontFamily: monoFont,
+                            letterSpacing: 1,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                        }}
+                    >
+                        <BarChart2 size={14} />
+                        CALCULATED vs MARKET — {activeType.toUpperCase()}
+                    </div>
+
+                    {/* Contract Info */}
+                    {marketData.market?.[activeType] && (
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 12,
+                                marginBottom: 16,
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            {[
+                                { label: "STRIKE", value: `$${marketData.market[activeType].strike?.toFixed(0)}` },
+                                { label: "BID", value: `$${marketData.market[activeType].bid?.toFixed(2)}` },
+                                { label: "ASK", value: `$${marketData.market[activeType].ask?.toFixed(2)}` },
+                                { label: "DTE", value: `${marketData.market[activeType].dte}d` },
+                                { label: "MKT IV", value: `${(marketData.market[activeType].impliedVolatility * 100).toFixed(1)}%` },
+                            ].map((item, i) => (
+                                <div key={i} style={{ textAlign: "center", flex: "1 1 50px" }}>
+                                    <div style={{ fontSize: 9, color: TEXT_SECONDARY, fontFamily: monoFont, letterSpacing: 1 }}>
+                                        {item.label}
+                                    </div>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, fontFamily: monoFont }}>
+                                        {item.value}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Comparison Table */}
+                    {marketData.comparison[activeType] && (
+                        <div style={{ overflowX: "auto" }}>
+                            <table
+                                style={{
+                                    width: "100%",
+                                    borderCollapse: "separate",
+                                    borderSpacing: "0 4px",
+                                    fontFamily: monoFont,
+                                    fontSize: 12,
+                                }}
+                            >
+                                <thead>
+                                    <tr style={{ color: GOLD, fontSize: 10, letterSpacing: 0.5 }}>
+                                        <th style={{ textAlign: "left", padding: "6px 8px" }}>GREEK</th>
+                                        <th style={{ textAlign: "right", padding: "6px 8px" }}>CALCULATED</th>
+                                        <th style={{ textAlign: "right", padding: "6px 8px" }}>MARKET</th>
+                                        <th style={{ textAlign: "right", padding: "6px 8px" }}>DIFF</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {["delta", "gamma", "theta", "vega"].map((greek) => {
+                                        const comp = marketData.comparison[activeType][greek];
+                                        if (!comp) return null;
+                                        const diffColor =
+                                            Math.abs(comp.diff) < 5 ? GREEN :
+                                                Math.abs(comp.diff) < 15 ? AMBER : RED;
+                                        return (
+                                            <tr
+                                                key={greek}
+                                                style={{
+                                                    background: "rgba(201,168,76,0.03)",
+                                                    borderRadius: 6,
+                                                }}
+                                            >
+                                                <td style={{ padding: "8px", color: GREEK_INFO[greek]?.color || TEXT_PRIMARY, fontWeight: 600 }}>
+                                                    {GREEK_INFO[greek]?.label || greek}
+                                                </td>
+                                                <td style={{ padding: "8px", textAlign: "right", color: TEXT_PRIMARY }}>
+                                                    {comp.calculated?.toFixed(4)}
+                                                </td>
+                                                <td style={{ padding: "8px", textAlign: "right", color: PURPLE }}>
+                                                    {comp.market?.toFixed(4)}
+                                                </td>
+                                                <td style={{ padding: "8px", textAlign: "right", color: diffColor, fontWeight: 700 }}>
+                                                    {comp.diff >= 0 ? "+" : ""}{comp.diff?.toFixed(1)}%
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {!marketData.comparison[activeType] && (
+                        <div style={{ fontSize: 12, color: TEXT_SECONDARY, textAlign: "center", padding: 16 }}>
+                            No matching {activeType} contract found in the market data.
+                        </div>
+                    )}
+
+                    <div
+                        style={{
+                            marginTop: 12,
+                            fontSize: 9,
+                            color: TEXT_SECONDARY,
+                            fontFamily: monoFont,
+                            textAlign: "center",
+                        }}
+                    >
+                        {marketData._mock ? "Simulated market data" : "Live market data"}
+                        {" • "}
+                        Diff shows % deviation of calculated from market
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

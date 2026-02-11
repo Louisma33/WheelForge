@@ -125,3 +125,78 @@ export const simulateWheel = (priceData, params) => {
         currentCash: cash,
     };
 };
+
+// ─── HISTORICAL WHEEL BACKTESTER ───
+// Runs the wheel on actual Polygon OHLCV data — true historical backtest
+export const simulateWheelHistorical = async (ticker, params) => {
+    const { fetchHistoricalPrices, calculateHistoricalVolatility } = await import("./priceData");
+
+    const histData = await fetchHistoricalPrices(ticker, params.simDays || 252);
+    if (!histData?.data?.length || histData.data.length < 20) {
+        throw new Error(`Insufficient historical data for ${ticker}`);
+    }
+
+    // Use real volatility from the historical data
+    const realVol = calculateHistoricalVolatility(histData.data);
+    const priceDataWithRealVol = {
+        ...histData,
+        volatility: realVol,
+    };
+
+    // Run the standard wheel simulator on real data
+    const result = simulateWheel(priceDataWithRealVol, params);
+
+    // ── Enhanced metrics for historical backtest ──
+    const { history, trades, comparison } = result;
+
+    // Max drawdown
+    let peak = 0, maxDrawdown = 0;
+    for (const h of history) {
+        if (h.value > peak) peak = h.value;
+        const dd = (peak - h.value) / peak;
+        if (dd > maxDrawdown) maxDrawdown = dd;
+    }
+
+    // Win rate (trades where premium collected > potential loss)
+    const sellTrades = trades.filter((t) => t.type.startsWith("SELL"));
+    const assignTrades = trades.filter((t) => t.type.includes("ASSIGNED"));
+    const winRate = sellTrades.length > 0
+        ? ((sellTrades.length - assignTrades.length) / sellTrades.length) * 100
+        : 0;
+
+    // Sharpe ratio (simplified — using daily returns)
+    let sharpe = 0;
+    if (history.length > 1) {
+        const dailyReturns = [];
+        for (let i = 1; i < history.length; i++) {
+            dailyReturns.push((history[i].value - history[i - 1].value) / history[i - 1].value);
+        }
+        const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+        const stdDev = Math.sqrt(
+            dailyReturns.reduce((sum, r) => sum + (r - avgReturn) ** 2, 0) / (dailyReturns.length - 1)
+        );
+        const riskFreeDaily = (params.riskFreeRate || 0.05) / 252;
+        sharpe = stdDev > 0 ? ((avgReturn - riskFreeDaily) / stdDev) * Math.sqrt(252) : 0;
+    }
+
+    // Premium yield (total premium / initial cash, annualized)
+    const years = histData.data.length / 252;
+    const premiumYieldAnnual = years > 0
+        ? (result.totalPremium / params.initialCash / years) * 100
+        : 0;
+
+    return {
+        ...result,
+        // Enhanced backtest metrics
+        maxDrawdown: maxDrawdown * 100, // as percentage
+        sharpeRatio: parseFloat(sharpe.toFixed(3)),
+        winRate: parseFloat(winRate.toFixed(1)),
+        premiumYieldAnnual: parseFloat(premiumYieldAnnual.toFixed(2)),
+        realVolatility: parseFloat((realVol * 100).toFixed(2)),
+        tradingDays: histData.data.length,
+        // Data source info
+        dataSource: histData._live ? "historical" : "simulated",
+        _live: histData._live,
+        _mock: histData._mock,
+    };
+};

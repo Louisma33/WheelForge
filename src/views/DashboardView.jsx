@@ -4,7 +4,7 @@ import {
 } from "recharts";
 import {
     DollarSign, TrendingUp, Shield, Target, Brain,
-    RefreshCw, Sparkles,
+    RefreshCw, Sparkles, Database, Activity,
 } from "lucide-react";
 import StatCard from "../components/StatCard";
 import {
@@ -22,6 +22,9 @@ const DashboardView = ({
     aiRecs,
     recsLoading,
     getAiRecs,
+    dataSource = "simulated",
+    useLiveData = false,
+    ticker = "",
 }) => {
     if (!results) return null;
 
@@ -60,6 +63,78 @@ const DashboardView = ({
                     color={GREEN}
                 />
             </div>
+
+            {/* Data Source Badge */}
+            {useLiveData && (
+                <div
+                    style={{
+                        ...cardStyle,
+                        padding: "10px 16px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        border: dataSource === "historical"
+                            ? "1px solid rgba(74,222,128,0.2)"
+                            : "1px solid rgba(201,168,76,0.15)",
+                    }}
+                >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Database size={14} color={dataSource === "historical" ? GREEN : GOLD} />
+                        <span
+                            style={{
+                                fontFamily: monoFont,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: dataSource === "historical" ? GREEN : GOLD,
+                                letterSpacing: 0.5,
+                            }}
+                        >
+                            {dataSource === "historical" ? "📡 HISTORICAL BACKTEST" : "🎲 SIMULATED"}
+                        </span>
+                    </div>
+                    <span
+                        style={{
+                            fontFamily: monoFont,
+                            fontSize: 10,
+                            color: TEXT_SECONDARY,
+                        }}
+                    >
+                        {ticker}
+                        {results.tradingDays ? ` • ${results.tradingDays} days` : ""}
+                        {results.realVolatility ? ` • σ ${results.realVolatility}%` : ""}
+                    </span>
+                </div>
+            )}
+
+            {/* Backtest Metrics (only shown in live mode) */}
+            {useLiveData && results.maxDrawdown !== undefined && (
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <StatCard
+                        icon={Shield}
+                        label="Max DD"
+                        value={`-${results.maxDrawdown?.toFixed(1)}%`}
+                        sub="Max Drawdown"
+                        trend="down"
+                        color="#f87171"
+                    />
+                    <StatCard
+                        icon={Activity}
+                        label="Sharpe"
+                        value={results.sharpeRatio?.toFixed(2)}
+                        sub="Risk-Adj Return"
+                        trend={results.sharpeRatio >= 1 ? "up" : "down"}
+                        color={AMBER}
+                    />
+                    <StatCard
+                        icon={Target}
+                        label="Win Rate"
+                        value={`${results.winRate?.toFixed(0)}%`}
+                        sub="Contracts expired OTM"
+                        trend={results.winRate >= 50 ? "up" : "down"}
+                        color={GREEN}
+                    />
+                </div>
+            )}
 
             {/* Performance Comparison Chart */}
             <div style={{ ...cardStyle, padding: "18px 10px 10px" }}>
