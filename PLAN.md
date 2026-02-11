@@ -178,15 +178,28 @@ server/
 └── render.yaml                  ← Render deployment config
 ```
 
-## 🔲 Phase 7: Production Deployment & PWA (NEXT)
-- [ ] Deploy frontend to Vercel with CI/CD
-- [ ] Deploy backend to Render (production)
+## ⏳ Phase 7: Production Deployment & PWA (IN PROGRESS)
+- [x] Deploy frontend to Vercel → **https://wheelforge-alpha.vercel.app**
+- [x] Vercel env: `VITE_API_BASE_URL` → `https://wheelforge-api.onrender.com/api`
+- [ ] Deploy backend to Render (see steps below)
 - [ ] Custom domain setup (e.g., wheelforge.app)
-- [ ] PWA manifest + service worker (offline mode)
+- [x] PWA manifest + icons (192px + 512px)
+- [ ] PWA service worker (offline mode)
 - [ ] Performance audit (Lighthouse 90+)
-- [ ] Responsive polish for tablet/desktop breakpoints
-- [ ] Keyboard shortcuts (Ctrl+Enter = simulate, etc.)
-- [ ] SEO meta tags + Open Graph previews
-- [ ] Error boundary + fallback UI
+- [x] Responsive polish for tablet/desktop breakpoints
+- [x] Keyboard shortcuts (Ctrl+Enter, Ctrl+S, 1-8, Esc)
+- [x] SEO meta tags + Open Graph previews
+- [x] Error boundary + fallback UI
 - [ ] Analytics integration (optional)
+
+### Render Backend Deployment Steps
+1. Go to **https://dashboard.render.com/blueprints**
+2. Click **"New Blueprint Instance"**
+3. Connect the **WheelForge** GitHub repo
+4. Render will auto-detect `render.yaml`
+5. Set secret env vars:
+   - `POLYGON_API_KEY` — your Polygon.io API key
+   - `ANTHROPIC_API_KEY` — your Claude API key
+6. Click **Deploy**
+7. Once live, verify: `https://wheelforge-api.onrender.com/api/health`
 
