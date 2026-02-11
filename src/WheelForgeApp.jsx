@@ -268,6 +268,45 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
     if (onboarded && !results) runSimulation();
   }, [onboarded]);
 
+  // ─── KEYBOARD SHORTCUTS ───
+  useEffect(() => {
+    const TABS = ["market", "dashboard", "predictions", "greeks", "optimizer", "advisor", "portfolio", "trades"];
+    const handler = (e) => {
+      // Skip if typing in an input/textarea
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      // Ctrl/Cmd + Enter → Run Simulation
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        if (!running) runSimulation();
+        return;
+      }
+
+      // Ctrl/Cmd + S → Toggle Settings
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        setShowSettings((s) => !s);
+        return;
+      }
+
+      // Escape → Close settings panel
+      if (e.key === "Escape" && showSettings) {
+        setShowSettings(false);
+        return;
+      }
+
+      // Number keys 1-8 → Switch tabs
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= TABS.length && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        setTab(TABS[num - 1]);
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [running, showSettings, runSimulation]);
+
   // ─── ONBOARDING COMPLETE → BUILD PROFILE ───
   const completeOnboarding = async () => {
     setProfileLoading(true);
@@ -859,6 +898,13 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
         />
       </div>
 
+      {/* Keyboard Shortcut Hints (desktop only) */}
+      <div className="shortcut-hint">
+        <span><kbd>Ctrl</kbd><kbd>↵</kbd> Simulate</span>
+        <span><kbd>Ctrl</kbd><kbd>S</kbd> Settings</span>
+        <span><kbd>1</kbd>–<kbd>8</kbd> Switch tabs</span>
+        <span><kbd>Esc</kbd> Close</span>
+      </div>
       <div style={{ padding: "0 16px" }}>
         <Suspense fallback={<ChunkLoader />}>
           {/* Market Overview / Ticker Detail */}

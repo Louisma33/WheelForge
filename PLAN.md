@@ -79,8 +79,8 @@ src/
 └── main.jsx                   ← Entry point
 ```
 
-## 🔲 Phase 5: Deployment & Polish (NEXT)
-- [ ] Production build optimization (code splitting)
+## ✅ Phase 5: Deployment & Polish (COMPLETE)
+- [x] Production build optimization (code splitting via React.lazy)
 - [ ] Deploy to Vercel/Netlify
 - [ ] PWA support (offline-capable)
 - [ ] Custom domain setup
@@ -88,30 +88,105 @@ src/
 - [ ] Responsive fine-tuning for tablets/desktop
 - [ ] Keyboard shortcuts for power users
 
-## 🔲 Phase 6: Polygon.io Market Data Integration (HIGH PRIORITY)
+## ✅ Phase 6: Polygon.io Market Data Integration (COMPLETE)
 > **Spec by:** AFFIX Financial Solutions LLC — see `POLYGON_SPEC.md` and `POLYGON_IMPLEMENTATION_PLAN.md`
 
-### Sprint 1: Foundation (Days 1–3)
-- [ ] Express backend proxy (`server/`) with Polygon.io REST client
-- [ ] In-memory caching (5min stocks, 24hr history, 7d reference)
-- [ ] Rate limiting middleware
-- [ ] Frontend API client + React hooks (`src/services/`)
-- [ ] Deploy backend to Render (dev)
+### Sprint 1: Foundation ✅
+- [x] Express backend proxy (`server/`) with Polygon.io REST client
+- [x] In-memory caching (5min stocks, 24hr history, 7d reference)
+- [x] Rate limiting middleware
+- [x] Frontend API client + React hooks (`src/services/`)
+- [x] Deploy backend to Render (dev)
 
-### Sprint 2: Core Data (Days 4–8)
-- [ ] Stock snapshot + ticker search endpoints
-- [ ] Options chain snapshot endpoint
-- [ ] Ticker Detail View with interactive price charts
-- [ ] Options Chain Browser view
+### Sprint 2: Core Data ✅
+- [x] Stock snapshot + ticker search endpoints
+- [x] Options chain snapshot endpoint
+- [x] Ticker Detail View with interactive price charts
+- [x] Options Chain Browser view
 
-### Sprint 3: Simulation Enhancement (Days 9–13)
-- [ ] Historical backtesting with real Polygon OHLCV data
-- [ ] Dashboard "Use Live Data" toggle
-- [ ] Monte Carlo with real historical volatility
-- [ ] Live Greeks comparison (calculated vs. Polygon)
+### Sprint 3: Simulation Enhancement ✅
+- [x] Historical backtesting with real Polygon OHLCV data
+- [x] Dashboard "Use Live Data" toggle
+- [x] Monte Carlo with real historical volatility
+- [x] Live Greeks comparison (calculated vs. Polygon)
 
-### Sprint 4: Market View & Streaming (Days 14–19)
-- [ ] Market Overview / Watchlist screen
-- [ ] WebSocket delayed streaming (15-min)
-- [ ] AI Advisor enriched with live market context
-- [ ] Integration testing + polish
+### Sprint 4: Streaming & AI Enhancement ✅
+- [x] Market Overview / Watchlist screen
+- [x] WebSocket delayed streaming
+- [x] AI Advisor enriched with live market context
+- [x] Integration testing + polish
+
+## Architecture (Current)
+```
+src/
+├── engine/                      ← 7 modules
+│   ├── blackScholes.js          ← Normal CDF + BS pricing
+│   ├── priceData.js             ← GBM + live data + historical vol
+│   ├── wheelSimulator.js        ← Wheel sim + historical backtest
+│   ├── predictionEngine.js      ← Linear regression + Monte Carlo
+│   ├── greeks.js                ← Greeks (Δ Γ Θ ν ρ) + market comparison
+│   ├── optimizer.js             ← Grid search + multi-ticker
+│   └── index.js                 ← Barrel exports
+├── services/                    ← API + streaming
+│   ├── polygonApi.js            ← REST client for backend proxy
+│   ├── marketDataHooks.js       ← React hooks for market data
+│   └── websocketService.js      ← WS client + React hooks
+├── constants/
+│   └── index.js                 ← Design tokens + styles + onboarding
+├── utils/
+│   ├── index.js                 ← Formatting, Claude API, LocalStorage
+│   └── exportUtils.js           ← CSV export
+├── components/                  ← Reusable components
+│   ├── StatCard.jsx
+│   ├── ProgressRing.jsx
+│   ├── Tab.jsx
+│   ├── MarketStatusBadge.jsx
+│   ├── LivePriceTicker.jsx
+│   ├── PriceChart.jsx
+│   └── OptionsChainTable.jsx
+├── views/                       ← 13 view components
+│   ├── DashboardView.jsx        ← Performance + backtest metrics
+│   ├── PredictionsView.jsx      ← Monte Carlo + real vol
+│   ├── GreeksView.jsx           ← Greeks + market comparison
+│   ├── OptimizerView.jsx        ← Strategy optimizer
+│   ├── AdvisorView.jsx          ← AI chat (context-enriched)
+│   ├── PortfolioView.jsx        ← Allocation + returns
+│   ├── TradesView.jsx           ← Trade log + CSV
+│   ├── HistoryView.jsx          ← Simulation history
+│   ├── MarketOverviewView.jsx   ← Live market watchlist
+│   ├── TickerDetailView.jsx     ← Ticker detail + charts
+│   ├── OptionsChainView.jsx     ← Options chain browser
+│   └── OnboardingScreen.jsx     ← Onboarding flow
+├── WheelForgeApp.jsx            ← Main app (state + routing + 10 tabs)
+├── App.jsx                      ← Root component
+└── main.jsx                     ← Entry point
+
+server/
+├── index.js                     ← Express + WebSocket server
+├── package.json
+├── services/
+│   ├── polygonClient.js         ← Polygon.io API client + cache
+│   └── mockData.js              ← Mock data for development
+├── routes/
+│   ├── stocks.js                ← Stock endpoints
+│   ├── options.js               ← Options endpoints
+│   ├── search.js                ← Search + ticker details
+│   └── ai.js                    ← AI chat proxy
+├── middleware/
+│   └── rateLimiter.js           ← Rate limiting tiers
+├── .env.example
+└── render.yaml                  ← Render deployment config
+```
+
+## 🔲 Phase 7: Production Deployment & PWA (NEXT)
+- [ ] Deploy frontend to Vercel with CI/CD
+- [ ] Deploy backend to Render (production)
+- [ ] Custom domain setup (e.g., wheelforge.app)
+- [ ] PWA manifest + service worker (offline mode)
+- [ ] Performance audit (Lighthouse 90+)
+- [ ] Responsive polish for tablet/desktop breakpoints
+- [ ] Keyboard shortcuts (Ctrl+Enter = simulate, etc.)
+- [ ] SEO meta tags + Open Graph previews
+- [ ] Error boundary + fallback UI
+- [ ] Analytics integration (optional)
+

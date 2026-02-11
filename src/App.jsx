@@ -1,7 +1,12 @@
+import ErrorBoundary from './components/ErrorBoundary'
 import WheelForgeApp from './WheelForgeApp'
 
 function App() {
-  return <WheelForgeApp />
+  return (
+    <ErrorBoundary>
+      <WheelForgeApp />
+    </ErrorBoundary>
+  )
 }
 
 export default App
