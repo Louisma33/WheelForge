@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import {
   Activity, BarChart3, Zap, MessageCircle,
   PieChart as PieIcon, Settings, Play, RefreshCw, Clock,
@@ -22,16 +22,43 @@ import { exportSummaryCSV, exportHistoryCSV } from "./utils/exportUtils";
 // Components
 import Tab from "./components/Tab";
 
-// Views
+// Lightweight views — static imports
 import OnboardingScreen from "./views/OnboardingScreen";
-import DashboardView from "./views/DashboardView";
-import PredictionsView from "./views/PredictionsView";
 import AdvisorView from "./views/AdvisorView";
-import PortfolioView from "./views/PortfolioView";
 import TradesView from "./views/TradesView";
 import HistoryView from "./views/HistoryView";
-import GreeksView from "./views/GreeksView";
-import OptimizerView from "./views/OptimizerView";
+
+// Heavy views (recharts) — lazy-loaded for code splitting
+const DashboardView = lazy(() => import("./views/DashboardView"));
+const PredictionsView = lazy(() => import("./views/PredictionsView"));
+const PortfolioView = lazy(() => import("./views/PortfolioView"));
+const GreeksView = lazy(() => import("./views/GreeksView"));
+const OptimizerView = lazy(() => import("./views/OptimizerView"));
+
+// Suspense fallback for lazy views
+const ChunkLoader = () => (
+  <div
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 60,
+      gap: 12,
+    }}
+  >
+    <RefreshCw
+      size={24}
+      color={GOLD}
+      style={{ animation: "pulse 1s infinite" }}
+    />
+    <span
+      style={{ fontSize: 12, color: TEXT_SECONDARY, fontFamily: "'JetBrains Mono', monospace" }}
+    >
+      Loading view...
+    </span>
+  </div>
+);
 
 // ─── MAIN APP ───
 export default function WheelForgeApp() {
@@ -670,53 +697,65 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
       </div>
 
       <div style={{ padding: "0 16px" }}>
-        {/* Dashboard */}
-        {tab === "dashboard" && (
-          <DashboardView
-            results={results}
-            predictions={predictions}
-            aiAnalysis={aiAnalysis}
-            analysisLoading={analysisLoading}
-            getAiAnalysis={getAiAnalysis}
-            aiRecs={aiRecs}
-            recsLoading={recsLoading}
-            getAiRecs={getAiRecs}
-          />
-        )}
+        <Suspense fallback={<ChunkLoader />}>
+          {/* Dashboard */}
+          {tab === "dashboard" && (
+            <DashboardView
+              results={results}
+              predictions={predictions}
+              aiAnalysis={aiAnalysis}
+              analysisLoading={analysisLoading}
+              getAiAnalysis={getAiAnalysis}
+              aiRecs={aiRecs}
+              recsLoading={recsLoading}
+              getAiRecs={getAiRecs}
+            />
+          )}
 
-        {/* Predictions */}
-        {tab === "predictions" && (
-          <PredictionsView
-            predictions={predictions}
-            daysToExpiry={daysToExpiry}
-          />
-        )}
+          {/* Predictions */}
+          {tab === "predictions" && (
+            <PredictionsView
+              predictions={predictions}
+              daysToExpiry={daysToExpiry}
+            />
+          )}
 
-        {/* Greeks */}
-        {tab === "greeks" && (
-          <GreeksView
-            priceData={priceData}
-            ticker={ticker}
-            otmPct={otmPct}
-            daysToExpiry={daysToExpiry}
-            riskFreeRate={riskFreeRate}
-            contracts={contracts}
-          />
-        )}
+          {/* Greeks */}
+          {tab === "greeks" && (
+            <GreeksView
+              priceData={priceData}
+              ticker={ticker}
+              otmPct={otmPct}
+              daysToExpiry={daysToExpiry}
+              riskFreeRate={riskFreeRate}
+              contracts={contracts}
+            />
+          )}
 
-        {/* Optimizer */}
-        {tab === "optimizer" && (
-          <OptimizerView
-            ticker={ticker}
-            initialCash={initialCash}
-            contracts={contracts}
-            riskFreeRate={riskFreeRate}
-            otmPct={otmPct}
-            daysToExpiry={daysToExpiry}
-          />
-        )}
+          {/* Optimizer */}
+          {tab === "optimizer" && (
+            <OptimizerView
+              ticker={ticker}
+              initialCash={initialCash}
+              contracts={contracts}
+              riskFreeRate={riskFreeRate}
+              otmPct={otmPct}
+              daysToExpiry={daysToExpiry}
+            />
+          )}
 
-        {/* AI Advisor */}
+          {/* Portfolio */}
+          {tab === "portfolio" && (
+            <PortfolioView
+              results={results}
+              priceData={priceData}
+              ticker={ticker}
+              initialCash={initialCash}
+            />
+          )}
+        </Suspense>
+
+        {/* AI Advisor — static import, no Suspense needed */}
         {tab === "advisor" && (
           <AdvisorView
             chatMessages={chatMessages}
@@ -727,17 +766,7 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
           />
         )}
 
-        {/* Portfolio */}
-        {tab === "portfolio" && (
-          <PortfolioView
-            results={results}
-            priceData={priceData}
-            ticker={ticker}
-            initialCash={initialCash}
-          />
-        )}
-
-        {/* Trades */}
+        {/* Trades — static import */}
         {tab === "trades" && (
           <TradesView
             results={results}
