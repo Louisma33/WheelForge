@@ -100,7 +100,7 @@ export default function OptionsChainTable({ contracts = [], underlyingPrice, onS
                             key={exp}
                             onClick={() => setSelectedExp(exp)}
                             style={{
-                                padding: "5px 10px", borderRadius: 8, border: "none",
+                                padding: "5px 10px", borderRadius: 8,
                                 fontFamily: monoFont, fontSize: 10, fontWeight: 600,
                                 cursor: "pointer", transition: "all 0.2s",
                                 background: exp === (selectedExp || expirations[0]) ? `${GOLD}22` : "transparent",

@@ -86,7 +86,7 @@ export default function OptionsChainView({ initialTicker = "SPY", onSimulate, on
                                 key={t}
                                 onClick={() => setTicker(t)}
                                 style={{
-                                    padding: "6px 14px", borderRadius: 8, border: "none",
+                                    padding: "6px 14px", borderRadius: 8,
                                     fontFamily: monoFont, fontSize: 12, fontWeight: 700,
                                     cursor: "pointer", transition: "all 0.2s",
                                     background: t === ticker ? `${GOLD}22` : `${DARK_SURFACE}`,

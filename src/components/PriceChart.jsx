@@ -79,7 +79,7 @@ export default function PriceChart({ ticker, defaultRange = "3M", height = 300, 
                                 key={r}
                                 onClick={() => setRange(r)}
                                 style={{
-                                    padding: "5px 10px", borderRadius: 8, border: "none",
+                                    padding: "5px 10px", borderRadius: 8,
                                     fontFamily: monoFont, fontSize: 11, fontWeight: 600,
                                     cursor: "pointer", transition: "all 0.2s",
                                     background: r === range ? `${GOLD}22` : "transparent",
