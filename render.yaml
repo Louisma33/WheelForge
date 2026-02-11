@@ -3,6 +3,7 @@ services:
     name: wheelforge-api
     runtime: node
     region: ohio
+    plan: free
     buildCommand: cd server && npm install
     startCommand: cd server && node index.js
     envVars:
@@ -11,6 +12,8 @@ services:
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: CORS_ORIGIN
-        sync: false
+        value: https://wheelforge-alpha.vercel.app
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: "10000"

@@ -29,3 +29,4 @@ server/.env
 
 # Server dependencies
 server/node_modules
+.vercel
