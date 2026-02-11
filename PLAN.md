@@ -87,3 +87,31 @@ src/
 - [ ] Performance monitoring
 - [ ] Responsive fine-tuning for tablets/desktop
 - [ ] Keyboard shortcuts for power users
+
+## 🔲 Phase 6: Polygon.io Market Data Integration (HIGH PRIORITY)
+> **Spec by:** AFFIX Financial Solutions LLC — see `POLYGON_SPEC.md` and `POLYGON_IMPLEMENTATION_PLAN.md`
+
+### Sprint 1: Foundation (Days 1–3)
+- [ ] Express backend proxy (`server/`) with Polygon.io REST client
+- [ ] In-memory caching (5min stocks, 24hr history, 7d reference)
+- [ ] Rate limiting middleware
+- [ ] Frontend API client + React hooks (`src/services/`)
+- [ ] Deploy backend to Render (dev)
+
+### Sprint 2: Core Data (Days 4–8)
+- [ ] Stock snapshot + ticker search endpoints
+- [ ] Options chain snapshot endpoint
+- [ ] Ticker Detail View with interactive price charts
+- [ ] Options Chain Browser view
+
+### Sprint 3: Simulation Enhancement (Days 9–13)
+- [ ] Historical backtesting with real Polygon OHLCV data
+- [ ] Dashboard "Use Live Data" toggle
+- [ ] Monte Carlo with real historical volatility
+- [ ] Live Greeks comparison (calculated vs. Polygon)
+
+### Sprint 4: Market View & Streaming (Days 14–19)
+- [ ] Market Overview / Watchlist screen
+- [ ] WebSocket delayed streaming (15-min)
+- [ ] AI Advisor enriched with live market context
+- [ ] Integration testing + polish

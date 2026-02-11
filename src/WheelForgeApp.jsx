@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react
 import {
   Activity, BarChart3, Zap, MessageCircle,
   PieChart as PieIcon, Settings, Play, RefreshCw, Clock,
-  Cpu, TrendingUp, Download,
+  Cpu, TrendingUp, Download, Layers, Globe,
 } from "lucide-react";
 
 // Engine
@@ -34,6 +34,11 @@ const PredictionsView = lazy(() => import("./views/PredictionsView"));
 const PortfolioView = lazy(() => import("./views/PortfolioView"));
 const GreeksView = lazy(() => import("./views/GreeksView"));
 const OptimizerView = lazy(() => import("./views/OptimizerView"));
+
+// Market data views — lazy-loaded
+const MarketOverviewView = lazy(() => import("./views/MarketOverviewView"));
+const TickerDetailView = lazy(() => import("./views/TickerDetailView"));
+const OptionsChainView = lazy(() => import("./views/OptionsChainView"));
 
 // Suspense fallback for lazy views
 const ChunkLoader = () => (
@@ -100,6 +105,9 @@ export default function WheelForgeApp() {
   const [priceData, setPriceData] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [simCount, setSimCount] = useState(0);
+
+  // ── Market data navigation state ──
+  const [detailTicker, setDetailTicker] = useState(null);
 
   // ── AI Chat state ──
   const [chatMessages, setChatMessages] = useState(() =>
@@ -646,6 +654,12 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
         }}
       >
         <Tab
+          active={tab === "market"}
+          label="Market"
+          icon={Globe}
+          onClick={() => { setTab("market"); setDetailTicker(null); }}
+        />
+        <Tab
           active={tab === "dashboard"}
           label="Dashboard"
           icon={BarChart3}
@@ -662,6 +676,12 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
           label="Greeks"
           icon={Activity}
           onClick={() => setTab("greeks")}
+        />
+        <Tab
+          active={tab === "options"}
+          label="Options"
+          icon={Layers}
+          onClick={() => setTab("options")}
         />
         <Tab
           active={tab === "optimizer"}
@@ -698,6 +718,56 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
 
       <div style={{ padding: "0 16px" }}>
         <Suspense fallback={<ChunkLoader />}>
+          {/* Market Overview / Ticker Detail */}
+          {tab === "market" && !detailTicker && (
+            <MarketOverviewView
+              onSelectTicker={(t) => setDetailTicker(t)}
+            />
+          )}
+          {tab === "market" && detailTicker && (
+            <TickerDetailView
+              ticker={detailTicker}
+              onBack={() => setDetailTicker(null)}
+              onSimulate={(t, price, contractInfo) => {
+                setTicker(t);
+                if (contractInfo) {
+                  if (contractInfo.strike && contractInfo.iv) {
+                    const otm = Math.abs(price - contractInfo.strike) / price * 100;
+                    setOtmPct(Math.round(otm * 10) / 10 || otmPct);
+                  }
+                  if (contractInfo.expDate) {
+                    const dte = Math.max(1, Math.round((new Date(contractInfo.expDate) - new Date()) / 86400000));
+                    setDaysToExpiry(dte);
+                  }
+                }
+                setTab("dashboard");
+                setTimeout(runSimulation, 100);
+              }}
+            />
+          )}
+
+          {/* Options Chain Browser */}
+          {tab === "options" && (
+            <OptionsChainView
+              initialTicker={ticker}
+              onSimulate={(t, price, contractInfo) => {
+                setTicker(t);
+                if (contractInfo) {
+                  if (contractInfo.strike && contractInfo.iv) {
+                    const otm = Math.abs(price - contractInfo.strike) / price * 100;
+                    setOtmPct(Math.round(otm * 10) / 10 || otmPct);
+                  }
+                  if (contractInfo.expDate) {
+                    const dte = Math.max(1, Math.round((new Date(contractInfo.expDate) - new Date()) / 86400000));
+                    setDaysToExpiry(dte);
+                  }
+                }
+                setTab("dashboard");
+                setTimeout(runSimulation, 100);
+              }}
+            />
+          )}
+
           {/* Dashboard */}
           {tab === "dashboard" && (
             <DashboardView
@@ -818,8 +888,8 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
           lineHeight: 1.6,
         }}
       >
-        ⚠️ EDUCATIONAL ONLY. Uses simulated data & Black-Scholes estimates.
-        Not financial advice. Past performance ≠ future results.
+        ⚠️ EDUCATIONAL ONLY. Market data is 15-min delayed (via Polygon.io).
+        Simulations use Black-Scholes estimates. Not financial advice. Past performance ≠ future results.
       </div>
     </div>
   );

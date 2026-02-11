@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: wheelforge-api
+    runtime: node
+    region: ohio
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
+    envVars:
+      - key: POLYGON_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: NODE_ENV
+        value: production
