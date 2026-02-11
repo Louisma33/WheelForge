@@ -226,29 +226,29 @@ server/                            ← NEW — Backend proxy
 
 ## Implementation Order
 
-### Sprint 1: Foundation (Days 1–3)
-- [ ] **6.1** Set up Express backend with Polygon client
-- [ ] **6.1** Implement caching layer + rate limiting
-- [ ] **6.2** Create frontend API client + hooks
-- [ ] Deploy backend to Render (dev environment)
+### Sprint 1: Foundation (Days 1–3) ✅
+- [x] **6.1** Set up Express backend with Polygon client
+- [x] **6.1** Implement caching layer + rate limiting
+- [x] **6.2** Create frontend API client + hooks
+- [x] Deploy backend to Render (dev environment)
 
-### Sprint 2: Core Data Integration (Days 4–8)
-- [ ] **6.3** Stock snapshot + search endpoints
-- [ ] **6.3** Options chain snapshot endpoint
-- [ ] **6.4** Ticker Detail View with charts
-- [ ] **6.5** Options Chain Browser view
+### Sprint 2: Core Data Integration (Days 4–8) ✅
+- [x] **6.3** Stock snapshot + search endpoints
+- [x] **6.3** Options chain snapshot endpoint
+- [x] **6.4** Ticker Detail View with charts
+- [x] **6.5** Options Chain Browser view
 
-### Sprint 3: Simulation Enhancement (Days 9–13)
-- [ ] **6.3** Historical backtesting with real data
-- [ ] **6.4** Dashboard live data toggle
-- [ ] **6.3** Monte Carlo with real volatility
-- [ ] **6.3** Live Greeks comparison
+### Sprint 3: Simulation Enhancement (Days 9–13) ✅
+- [x] **6.3** Historical backtesting with real data
+- [x] **6.4** Dashboard live data toggle
+- [x] **6.3** Monte Carlo with real volatility
+- [x] **6.3** Live Greeks comparison
 
-### Sprint 4: Market View & Streaming (Days 14–19)
-- [ ] **6.4** Market Overview / Watchlist screen
-- [ ] **6.6** WebSocket delayed streaming
-- [ ] **6.7** AI Advisor context enrichment
-- [ ] Integration testing + polish
+### Sprint 4: Streaming & AI Enhancement (Days 14–19) ✅
+- [x] **6.4** Market Overview / Watchlist screen
+- [x] **6.6** WebSocket delayed streaming
+- [x] **6.7** AI Advisor context enrichment
+- [x] Integration testing + polish
 
 ---
 

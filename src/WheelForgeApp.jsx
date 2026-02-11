@@ -178,9 +178,21 @@ ${predictions
         ? `- Current Price: $${predictions.currentPrice.toFixed(2)}\n- Put Assignment Prob: ${(predictions.putAssignProb * 100).toFixed(1)}%\n- Call Assignment Prob: ${(predictions.callAssignProb * 100).toFixed(1)}%`
         : ""
       }
+${useLiveData && results?.dataSource === "historical"
+        ? `\nLIVE MARKET CONTEXT:
+- Data Source: Historical backtest (real price data)
+- Historical Volatility: ${results.realVolatility || "N/A"}%
+- Max Drawdown: -${results.maxDrawdown?.toFixed(1) || "N/A"}%
+- Sharpe Ratio: ${results.sharpeRatio?.toFixed(2) || "N/A"}
+- Win Rate: ${results.winRate?.toFixed(0) || "N/A"}% (contracts expired OTM)
+- Annual Premium Yield: ${results.premiumYieldAnnual?.toFixed(1) || "N/A"}%
+- Trading Days Analyzed: ${results.tradingDays || "N/A"}
+NOTE: This simulation used REAL historical prices, not Monte Carlo paths. Your analysis should reference actual market behavior.`
+        : `\nDATA MODE: Simulated (GBM-generated price paths). Treat results as scenario analysis, not historical performance.`
+      }
 
-Keep responses concise (under 200 words), practical, and tailored to the user's experience level. Use plain English. If discussing risk, be honest but constructive. Never provide specific financial advice — frame as educational simulation analysis. Use $ and % formatting for numbers.`,
-    [profileSummary, profile, ticker, initialCash, otmPct, daysToExpiry, contracts, results, predictions]
+Keep responses concise (under 200 words), practical, and tailored to the user's experience level. Use plain English. If discussing risk, be honest but constructive. Never provide specific financial advice — frame as educational simulation analysis. Use $ and % formatting for numbers.${useLiveData ? " When referencing live data, mention specific values to show market awareness." : ""}`,
+    [profileSummary, profile, ticker, initialCash, otmPct, daysToExpiry, contracts, results, predictions, useLiveData]
   );
 
   // ─── RUN SIMULATION ───
