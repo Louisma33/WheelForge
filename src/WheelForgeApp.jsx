@@ -2,13 +2,11 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Activity, BarChart3, Zap, MessageCircle,
   PieChart as PieIcon, Settings, Play, RefreshCw, Clock,
+  Cpu, TrendingUp, Download,
 } from "lucide-react";
 
 // Engine
-import { generatePriceData } from "./engine";
-import { simulateWheel } from "./engine";
-import { predictOutcome } from "./engine";
-import { TICKERS } from "./engine";
+import { generatePriceData, simulateWheel, predictOutcome, TICKERS } from "./engine";
 
 // Constants & Utils
 import {
@@ -19,6 +17,7 @@ import {
   callClaude, fmt, fmtPct,
   saveToStorage, loadFromStorage, saveSimulation,
 } from "./utils";
+import { exportSummaryCSV, exportHistoryCSV } from "./utils/exportUtils";
 
 // Components
 import Tab from "./components/Tab";
@@ -31,6 +30,8 @@ import AdvisorView from "./views/AdvisorView";
 import PortfolioView from "./views/PortfolioView";
 import TradesView from "./views/TradesView";
 import HistoryView from "./views/HistoryView";
+import GreeksView from "./views/GreeksView";
+import OptimizerView from "./views/OptimizerView";
 
 // ─── MAIN APP ───
 export default function WheelForgeApp() {
@@ -137,17 +138,7 @@ ${predictions
       }
 
 Keep responses concise (under 200 words), practical, and tailored to the user's experience level. Use plain English. If discussing risk, be honest but constructive. Never provide specific financial advice — frame as educational simulation analysis. Use $ and % formatting for numbers.`,
-    [
-      profileSummary,
-      profile,
-      ticker,
-      initialCash,
-      otmPct,
-      daysToExpiry,
-      contracts,
-      results,
-      predictions,
-    ]
+    [profileSummary, profile, ticker, initialCash, otmPct, daysToExpiry, contracts, results, predictions]
   );
 
   // ─── RUN SIMULATION ───
@@ -280,8 +271,7 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
     const history = chatMessages
       .slice(-6)
       .map(
-        (m) =>
-          `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`
+        (m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`
       )
       .join("\n");
     const response = await callClaude(
@@ -408,6 +398,28 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
           </div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
+          {/* Export Button */}
+          {results && (
+            <button
+              onClick={() => exportSummaryCSV(results, predictions, ticker, params)}
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(201,168,76,0.2)",
+                borderRadius: 10,
+                padding: "8px 10px",
+                color: GOLD,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 11,
+                fontFamily: monoFont,
+              }}
+              title="Export Summary"
+            >
+              <Download size={13} />
+            </button>
+          )}
           <button
             onClick={() => setShowSettings(!showSettings)}
             style={{
@@ -581,7 +593,6 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
             ))}
           </div>
 
-          {/* Sim Counter */}
           {simCount > 0 && (
             <div
               style={{
@@ -620,6 +631,18 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
           onClick={() => setTab("predictions")}
         />
         <Tab
+          active={tab === "greeks"}
+          label="Greeks"
+          icon={Activity}
+          onClick={() => setTab("greeks")}
+        />
+        <Tab
+          active={tab === "optimizer"}
+          label="Optimize"
+          icon={Cpu}
+          onClick={() => setTab("optimizer")}
+        />
+        <Tab
           active={tab === "advisor"}
           label="AI Advisor"
           icon={MessageCircle}
@@ -635,7 +658,7 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
         <Tab
           active={tab === "trades"}
           label="Trades"
-          icon={Activity}
+          icon={TrendingUp}
           onClick={() => setTab("trades")}
         />
         <Tab
@@ -669,6 +692,30 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
           />
         )}
 
+        {/* Greeks */}
+        {tab === "greeks" && (
+          <GreeksView
+            priceData={priceData}
+            ticker={ticker}
+            otmPct={otmPct}
+            daysToExpiry={daysToExpiry}
+            riskFreeRate={riskFreeRate}
+            contracts={contracts}
+          />
+        )}
+
+        {/* Optimizer */}
+        {tab === "optimizer" && (
+          <OptimizerView
+            ticker={ticker}
+            initialCash={initialCash}
+            contracts={contracts}
+            riskFreeRate={riskFreeRate}
+            otmPct={otmPct}
+            daysToExpiry={daysToExpiry}
+          />
+        )}
+
         {/* AI Advisor */}
         {tab === "advisor" && (
           <AdvisorView
@@ -691,7 +738,13 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
         )}
 
         {/* Trades */}
-        {tab === "trades" && <TradesView results={results} />}
+        {tab === "trades" && (
+          <TradesView
+            results={results}
+            ticker={ticker}
+            params={params}
+          />
+        )}
 
         {/* History */}
         {tab === "history" && <HistoryView />}

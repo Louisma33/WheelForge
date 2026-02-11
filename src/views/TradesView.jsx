@@ -1,9 +1,11 @@
+import { Download } from "lucide-react";
 import {
     GOLD, cardStyle, monoFont, TEXT_SECONDARY, TEXT_PRIMARY,
     AMBER, VIOLET, RED, GREEN,
 } from "../constants";
+import { exportTradesCSV } from "../utils/exportUtils";
 
-const TradesView = ({ results }) => {
+const TradesView = ({ results, ticker, params }) => {
     if (!results) return null;
 
     return (
@@ -11,14 +13,40 @@ const TradesView = ({ results }) => {
             <div style={{ ...cardStyle, padding: 14, overflowX: "auto" }}>
                 <div
                     style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: GOLD,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
                         marginBottom: 14,
-                        fontFamily: monoFont,
                     }}
                 >
-                    TRADE LOG ({results.trades.length})
+                    <div
+                        style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: GOLD,
+                            fontFamily: monoFont,
+                        }}
+                    >
+                        TRADE LOG ({results.trades.length})
+                    </div>
+                    <button
+                        onClick={() => exportTradesCSV(results.trades, ticker, params)}
+                        style={{
+                            background: "transparent",
+                            border: `1px solid ${GOLD}30`,
+                            borderRadius: 8,
+                            padding: "5px 10px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontSize: 10,
+                            color: GOLD,
+                            fontFamily: monoFont,
+                        }}
+                    >
+                        <Download size={10} /> Export CSV
+                    </button>
                 </div>
                 <div style={{ minWidth: 480 }}>
                     {/* Header */}
