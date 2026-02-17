@@ -184,10 +184,10 @@ server/
 - [ ] Deploy backend to Render (see steps below)
 - [ ] Custom domain setup (e.g., wheelforge.app)
 - [x] PWA manifest + icons (192px + 512px)
-- [ ] PWA service worker (offline mode)
+- [x] PWA service worker (offline mode) — cache-first for assets, network-first for API
 - [ ] Performance audit (Lighthouse 90+)
 - [x] Responsive polish for tablet/desktop breakpoints
-- [x] Keyboard shortcuts (Ctrl+Enter, Ctrl+S, 1-8, Esc)
+- [x] Keyboard shortcuts (Ctrl+Enter, Ctrl+S, 1-0, Esc)
 - [x] SEO meta tags + Open Graph previews
 - [x] Error boundary + fallback UI
 - [ ] Analytics integration (optional)
@@ -203,3 +203,122 @@ server/
 6. Click **Deploy**
 7. Once live, verify: `https://wheelforge-api.onrender.com/api/health`
 
+## ✅ Phase 8: Risk Analytics & Strategy Playbook (COMPLETE)
+
+### New Engine Modules
+- **`engine/riskAnalytics.js`** — Advanced risk metrics
+  - Value at Risk (VaR) — 95% confidence daily loss boundary
+  - Conditional VaR (CVaR / Expected Shortfall) — average tail risk
+  - Sortino Ratio — downside-only risk-adjusted return
+  - Kelly Criterion — optimal position sizing with half-Kelly recommendation
+  - Drawdown Analysis — max drawdown, duration, recovery rate, historical periods
+  - Win/Loss Streaks — consecutive win/loss tracking and current streak
+  - Composite Risk Score — 0–100 score with 5-factor breakdown
+
+- **`engine/strategyPlaybook.js`** — Pre-built wheel strategies
+  - 6 strategies: Conservative Income, Balanced Growth, Aggressive Premium, Theta Harvest, Blue Chip Safe Haven, Momentum Capture
+  - Each includes: ticker, OTM%, DTE, contracts, target returns, risk level, pro tips
+  - Profile-based ranking engine using onboarding answers (risk tolerance, capital, experience, frequency, goals)
+  - One-click Apply → loads strategy params into simulator
+
+### New Views
+- **`views/RiskAnalyticsView.jsx`** — Full risk visualization (lazy-loaded)
+  - 4 sub-tabs: Overview, VaR, Position Sizing, Drawdowns
+  - Radial gauge for composite risk score
+  - VaR distribution bar chart with contextual insights
+  - Kelly Criterion position sizing with half-Kelly recommendation
+  - Win/loss streak stats
+  - Historical drawdown period timeline
+  - Risk factor breakdown chart
+
+- **`views/PlaybookView.jsx`** — Strategy selection interface (lazy-loaded)
+  - Expandable strategy cards with risk dots, target metrics, pro tips
+  - Profile-based fit score ranking (if onboarded)
+  - One-click "APPLY" button to load strategy into simulator
+  - Current strategy indicator
+
+### Updated Components
+- **WheelForgeApp** — 12 tabs: Market, Dashboard, Predict, Greeks, Options, Optimize, AI Advisor, Portfolio, Trades, Risk, Playbook, History
+  - Keyboard shortcuts updated: 1-9 + 0 for 10 tabs
+  - New Shield + BookOpen icons from lucide-react
+  - Strategy apply handler wires playbook → simulator
+
+### Infrastructure
+- **PWA Service Worker** (`public/sw.js`)
+  - Cache-first for static assets (JS, CSS, images, fonts)
+  - Network-first with cache fallback for API calls
+  - Offline fallback to cached app shell
+  - Auto-cleanup of old caches on version bump
+
+## Architecture (Current)
+```
+src/
+├── engine/                        ← 9 modules
+│   ├── blackScholes.js            ← Normal CDF + BS pricing
+│   ├── priceData.js               ← GBM + live data + historical vol
+│   ├── wheelSimulator.js          ← Wheel sim + historical backtest
+│   ├── predictionEngine.js        ← Linear regression + Monte Carlo
+│   ├── greeks.js                  ← Greeks (Δ Γ Θ ν ρ) + market comparison
+│   ├── optimizer.js               ← Grid search + multi-ticker
+│   ├── riskAnalytics.js           ← VaR, Sortino, Kelly, drawdowns, risk score
+│   ├── strategyPlaybook.js        ← 6 pre-built strategies + recommendation engine
+│   └── index.js                   ← Barrel exports
+├── services/                      ← API + streaming
+│   ├── polygonApi.js              ← REST client for backend proxy
+│   ├── marketDataHooks.js         ← React hooks for market data
+│   └── websocketService.js        ← WS client + React hooks
+├── constants/
+│   └── index.js                   ← Design tokens + styles + onboarding
+├── utils/
+│   ├── index.js                   ← Formatting, Claude API, LocalStorage
+│   └── exportUtils.js             ← CSV export
+├── components/                    ← Reusable components
+│   ├── StatCard.jsx
+│   ├── ProgressRing.jsx
+│   ├── Tab.jsx
+│   ├── ErrorBoundary.jsx
+│   ├── MarketStatusBadge.jsx
+│   ├── LivePriceTicker.jsx
+│   ├── PriceChart.jsx
+│   └── OptionsChainTable.jsx
+├── views/                         ← 14 view components
+│   ├── DashboardView.jsx          ← Performance + backtest metrics
+│   ├── PredictionsView.jsx        ← Monte Carlo + real vol
+│   ├── GreeksView.jsx             ← Greeks + market comparison
+│   ├── OptimizerView.jsx          ← Strategy optimizer
+│   ├── AdvisorView.jsx            ← AI chat (context-enriched)
+│   ├── PortfolioView.jsx          ← Allocation + returns
+│   ├── TradesView.jsx             ← Trade log + CSV
+│   ├── HistoryView.jsx            ← Simulation history
+│   ├── MarketOverviewView.jsx     ← Live market watchlist
+│   ├── TickerDetailView.jsx       ← Ticker detail + charts
+│   ├── OptionsChainView.jsx       ← Options chain browser
+│   ├── RiskAnalyticsView.jsx      ← VaR, Kelly, drawdowns, risk score
+│   ├── PlaybookView.jsx           ← Strategy playbook + apply
+│   └── OnboardingScreen.jsx       ← Onboarding flow
+├── WheelForgeApp.jsx              ← Main app (state + routing + 12 tabs)
+├── App.jsx                        ← Root component
+└── main.jsx                       ← Entry point
+
+server/
+├── index.js                       ← Express + WebSocket server
+├── package.json
+├── services/
+│   ├── polygonClient.js           ← Polygon.io API client + cache
+│   └── mockData.js                ← Mock data for development
+├── routes/
+│   ├── stocks.js                  ← Stock endpoints
+│   ├── options.js                 ← Options endpoints
+│   ├── search.js                  ← Search + ticker details
+│   └── ai.js                      ← AI chat proxy
+├── middleware/
+│   └── rateLimiter.js             ← Rate limiting tiers
+├── .env.example
+└── render.yaml                    ← Render deployment config
+
+public/
+├── sw.js                          ← Service worker (PWA offline)
+├── manifest.json                  ← PWA manifest
+├── favicon.svg                    ← SVG favicon
+└── icon-512.png                   ← PWA icon
+```

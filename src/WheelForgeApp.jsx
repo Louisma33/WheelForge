@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react
 import {
   Activity, BarChart3, Zap, MessageCircle,
   PieChart as PieIcon, Settings, Play, RefreshCw, Clock,
-  Cpu, TrendingUp, Download, Layers, Globe,
+  Cpu, TrendingUp, Download, Layers, Globe, Shield, BookOpen,
 } from "lucide-react";
 
 // Engine
@@ -39,6 +39,10 @@ const OptimizerView = lazy(() => import("./views/OptimizerView"));
 const MarketOverviewView = lazy(() => import("./views/MarketOverviewView"));
 const TickerDetailView = lazy(() => import("./views/TickerDetailView"));
 const OptionsChainView = lazy(() => import("./views/OptionsChainView"));
+
+// Phase 8 views — lazy-loaded
+const RiskAnalyticsView = lazy(() => import("./views/RiskAnalyticsView"));
+const PlaybookView = lazy(() => import("./views/PlaybookView"));
 
 // Suspense fallback for lazy views
 const ChunkLoader = () => (
@@ -270,7 +274,7 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
 
   // ─── KEYBOARD SHORTCUTS ───
   useEffect(() => {
-    const TABS = ["market", "dashboard", "predictions", "greeks", "optimizer", "advisor", "portfolio", "trades"];
+    const TABS = ["market", "dashboard", "predictions", "greeks", "optimizer", "risk", "playbook", "advisor", "portfolio", "trades"];
     const handler = (e) => {
       // Skip if typing in an input/textarea
       const tag = document.activeElement?.tagName;
@@ -296,10 +300,14 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
         return;
       }
 
-      // Number keys 1-8 → Switch tabs
+      // Number keys 1-9, 0 → Switch tabs (0 = 10th)
       const num = parseInt(e.key);
-      if (num >= 1 && num <= TABS.length && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        setTab(TABS[num - 1]);
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (num >= 1 && num <= 9 && num <= TABS.length) {
+          setTab(TABS[num - 1]);
+        } else if (e.key === "0" && TABS.length >= 10) {
+          setTab(TABS[9]);
+        }
       }
     };
 
@@ -891,6 +899,18 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
           onClick={() => setTab("trades")}
         />
         <Tab
+          active={tab === "risk"}
+          label="Risk"
+          icon={Shield}
+          onClick={() => setTab("risk")}
+        />
+        <Tab
+          active={tab === "playbook"}
+          label="Playbook"
+          icon={BookOpen}
+          onClick={() => setTab("playbook")}
+        />
+        <Tab
           active={tab === "history"}
           label="History"
           icon={Clock}
@@ -902,7 +922,7 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
       <div className="shortcut-hint">
         <span><kbd>Ctrl</kbd><kbd>↵</kbd> Simulate</span>
         <span><kbd>Ctrl</kbd><kbd>S</kbd> Settings</span>
-        <span><kbd>1</kbd>–<kbd>8</kbd> Switch tabs</span>
+        <span><kbd>1</kbd>–<kbd>0</kbd> Switch tabs</span>
         <span><kbd>Esc</kbd> Close</span>
       </div>
       <div style={{ padding: "0 16px" }}>
@@ -1014,6 +1034,32 @@ Keep responses concise (under 200 words), practical, and tailored to the user's 
               priceData={priceData}
               ticker={ticker}
               initialCash={initialCash}
+            />
+          )}
+
+          {/* Risk Analytics */}
+          {tab === "risk" && (
+            <RiskAnalyticsView
+              results={results}
+              ticker={ticker}
+              riskFreeRate={riskFreeRate}
+            />
+          )}
+
+          {/* Strategy Playbook */}
+          {tab === "playbook" && (
+            <PlaybookView
+              answers={answers}
+              currentParams={params}
+              onApplyStrategy={(strategy) => {
+                setTicker(strategy.ticker);
+                setOtmPct(strategy.params.otmPct);
+                setDaysToExpiry(strategy.params.daysToExpiry);
+                setContracts(strategy.params.contracts);
+                setInitialCash(strategy.params.initialCash);
+                setTab("dashboard");
+                setTimeout(runSimulation, 100);
+              }}
             />
           )}
         </Suspense>
